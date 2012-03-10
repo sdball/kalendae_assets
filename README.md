@@ -1,24 +1,35 @@
 # KalendaeAssets
 
-TODO: Write a gem description
 
 ## Installation
 
-Add this line to your application's Gemfile:
+**Step 1**
 
-    gem 'kalendae_assets'
+Load `kalendae_assets` in your `Gemfile` as part of the `assets` group
 
-And then execute:
+    group :assets do
+      gem 'kalendae_assets'
+    end
 
-    $ bundle
+**Step 2**
 
-Or install it yourself as:
+Run 'bundle install'
 
-    $ gem install kalendae_assets
+**Step 3**
+
+Require `kalendae.js` in your Javascript manifest (e.g. `application.js`)
+
+    //= require kalendae
+
+**Step 4**
+
+Require `kalendae.css` in your CSS manifest (e.g. `application.css`)
+
+     *= require kalendae
 
 ## Usage
 
-TODO: Write usage instructions here
+See [Kalendae's Documentation](https://github.com/ChiperSoft/Kalendae)
 
 ## Contributing
 
