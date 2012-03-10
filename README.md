@@ -1,4 +1,4 @@
-# KalendaeAssets
+# Kalendae Assets
 
 
 ## Installation
