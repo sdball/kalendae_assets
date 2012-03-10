@@ -14,4 +14,6 @@ Gem::Specification.new do |gem|
   gem.name          = "kalendae_assets"
   gem.require_paths = ["lib"]
   gem.version       = KalendaeAssets::VERSION
+  gem.add_runtime_dependency 'rails',  '~> 3.1'
+  gem.add_development_dependency 'rails',  '~> 3.1'
 end
