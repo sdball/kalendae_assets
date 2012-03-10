@@ -1,5 +1,5 @@
 require "kalendae_assets/version"
+require "kalendae_assets/engine"
 
 module KalendaeAssets
-  # Your code goes here...
 end
