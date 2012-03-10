@@ -29,7 +29,15 @@ Require `kalendae.css` in your CSS manifest (e.g. `application.css`)
 
 ## Usage
 
-See [Kalendae's Documentation](https://github.com/ChiperSoft/Kalendae)
+See [Kalendae's Documentation](https://github.com/ChiperSoft/Kalendae) for full
+usage instructions.
+
+If you just want to get a quick date picker going: add `auto-kal` as a class to
+any element that you want to attach a date picker to.
+
+    <div class="auto-kal"></div>
+
+    <%= f.text_field :date, :class => 'auto-kal' %>
 
 ## Contributing
 
