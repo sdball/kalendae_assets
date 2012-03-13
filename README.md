@@ -1,4 +1,4 @@
-# Kalendae Assets
+# Kalendae Assets [![Build Status](https://secure.travis-ci.org/sdball/kalendae_assets.png?branch=master)](http://travis-ci.org/sdball/kalendae_assets)
 
 
 ## Installation
