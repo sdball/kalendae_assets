@@ -1,11 +1,11 @@
 require 'spec_helper'
 
 describe KalendaeAssets do
-  it "should provide kalendae.js on the asset pipeline" do
-    skip
+  it "must be a module" do
+    KalendaeAssets.must_be_instance_of Module
   end
 
-  it "should provide kalendae.css on the asset pipeline" do
-    skip
+  it "must have an Engine class" do
+    KalendaeAssets::Engine.must_be_instance_of Class
   end
 end
