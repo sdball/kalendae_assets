@@ -2,7 +2,7 @@
  *	Kalendae, a framework agnostic javascript date picker           *
  *	Copyright(c) 2012 Jarvis Badgley (chipersoft@gmail.com)         *
  *	http://github.com/ChiperSoft/Kalendae                           *
- *	Version 0.1                                                     *
+ *	Version 0.2                                                     *
  ********************************************************************/
 
 (function (undefined) {
@@ -29,6 +29,8 @@ var Kalendae = function (targetElement, options) {
 		$span,
 		i = 0,
 		j = opts.months;
+
+	if (util.isIE8()) util.addClassName($container, 'ie8');
 
 	//generate the column headers (Su, Mo, Tu, etc)
 	i = 7;
@@ -59,16 +61,29 @@ var Kalendae = function (targetElement, options) {
 	}
 	self.viewStartDate = vsd.date(1);
 
+	var viewDelta = ({
+		'past'			: opts.months-1,
+		'today-past'	: opts.months-1,
+		'any'			: opts.months>2?Math.floor(opts.months/2):0,
+		'today-future'	: 0,
+		'future'		: 0
+	})[this.settings.direction];
+
+
+	if (viewDelta && moment().month()==moment(self.viewStartDate).month()){
+		self.viewStartDate = moment(self.viewStartDate).subtract({M:viewDelta}).date(1);
+	}
+
 
 	if (typeof opts.blackout === 'function') {
 		self.blackout = opts.blackout;
 	} else if (!!opts.blackout) {
 		var bdates = parseDates(opts.blackout, opts.parseSplitDelimiter);
 		self.blackout = function (input) {
-			input = moment(input).hours(0).minutes(0).seconds(0).milliseconds(0).valueOf();
+			input = moment(input).yearDay();
 			if (input < 1 || !self._sel || self._sel.length < 1) return false;
 			var i = bdates.length;
-			while (i--) if (bdates[i].valueOf() === input) return true;
+			while (i--) if (bdates[i].yearDay() === input) return true;
 			return false;
 		}
 	} else {
@@ -93,8 +108,10 @@ var Kalendae = function (targetElement, options) {
 
 		//title bar
 		$title = util.make('div', {'class':classes.title}, $cal);
-		util.make('a', {'class':classes.previous}, $title);	//previous button
-		util.make('a', {'class':classes.next}, $title);		//next button
+		util.make('a', {'class':classes.previousYear}, $title);	//previous button
+		util.make('a', {'class':classes.previousMonth}, $title);	//previous button
+		util.make('a', {'class':classes.nextYear}, $title);		//next button
+		util.make('a', {'class':classes.nextMonth}, $title);		//next button
 		$caption = util.make('span', {'class':classes.caption}, $title);	//title caption
 
 		//column headers
@@ -126,26 +143,43 @@ var Kalendae = function (targetElement, options) {
 
 	util.addEvent($container, 'mousedown', function (event, target) {
 		var clickedDate;
-		if (util.hasClassName(target, classes.next)) {
+		if (util.hasClassName(target, classes.nextMonth)) {
 		//NEXT MONTH BUTTON
-			if (self.publish('view-changed', self, ['next']) !== false) {
+			if (!self.disableNext && self.publish('view-changed', self, ['next-month']) !== false) {
 				self.viewStartDate.add('months',1);
 				self.draw();
 			}
 			return false;
 
-		} else if (util.hasClassName(target, classes.previous)) {
+		} else if (util.hasClassName(target, classes.previousMonth)) {
 		//PREVIOUS MONTH BUTTON
-			if (self.publish('view-changed', self, ['previous']) !== false) {
+			if (!self.disablePreviousMonth && self.publish('view-changed', self, ['previous-month']) !== false) {
 				self.viewStartDate.subtract('months',1);
 				self.draw();
 			}
 			return false;
 
+		} else if (util.hasClassName(target, classes.nextYear)) {
+		//NEXT MONTH BUTTON
+			if (!self.disableNext && self.publish('view-changed', self, ['next-year']) !== false) {
+				self.viewStartDate.add('years',1);
+				self.draw();
+			}
+			return false;
+
+		} else if (util.hasClassName(target, classes.previousYear)) {
+		//PREVIOUS MONTH BUTTON
+			if (!self.disablePreviousMonth && self.publish('view-changed', self, ['previous-year']) !== false) {
+				self.viewStartDate.subtract('years',1);
+				self.draw();
+			}
+			return false;
+
+
 
 		} else if (util.hasClassName(target.parentNode, classes.days) && util.hasClassName(target, classes.dayActive) && (clickedDate = target.getAttribute('data-date'))) {
 		//DAY CLICK
-			clickedDate = moment(clickedDate, opts.dayAttributeFormat);
+			clickedDate = moment(clickedDate, opts.dayAttributeFormat).hours(12);
 			if (self.publish('date-clicked', self, [clickedDate]) !== false) {
 
 				switch (opts.mode) {
@@ -182,6 +216,7 @@ Kalendae.prototype = {
 		months:					1,				/* total number of months to display side by side */
 		weekStart:				0,				/* day to use for the start of the week. 0 is Sunday */
 		direction:				'any',			/* past, today-past, any, today-future, future */
+		directionScrolling:		true,			/* if a direction other than any is defined, prevent scrolling out of range */
 		viewStartDate:			null,			/* date in the month to display.  When multiple months, this is the left most */
 		blackout:				null,			/* array of dates, or function to be passed a date */
 		selected:				null,			/* dates already selected.  can be string, date, or array of strings or dates. */
@@ -206,8 +241,10 @@ Kalendae.prototype = {
 		monthMiddle		:'k-middle-month',
 		monthLast		:'k-last-month',
 		title			:'k-title',
-		previous		:'k-previous',
-		next			:'k-next',
+		previousMonth	:'k-btn-previous-month',
+		nextMonth		:'k-btn-next-month',
+		previousYear	:'k-btn-previous-year',
+		nextYear		:'k-btn-next-year',
 		caption			:'k-caption',
 		header			:'k-header',
 		days			:'k-days',
@@ -216,15 +253,24 @@ Kalendae.prototype = {
 		daySelected		:'k-selected',
 		dayInRange		:'k-range',
 		dayToday		:'k-today',
-		monthSeparator	:'k-separator'
+		monthSeparator	:'k-separator',
+		disablePreviousMonth	:'k-disable-previous-month-btn',
+		disableNextMonth		:'k-disable-next-month-btn',
+		disablePreviousYear		:'k-disable-previous-year-btn',
+		disableNextYear			:'k-disable-next-year-btn'
 	},
 
+	disablePreviousMonth: false,
+	disableNextMonth: false,
+	disablePreviousYear: false,
+	disableNextYear: false,
+
 	directions: {
-		'past'			:function (date) {return moment(date).valueOf() >= today.valueOf();},
-		'today-past'	:function (date) {return moment(date).valueOf() > today.valueOf();},
+		'past'			:function (date) {return moment(date).yearDay() >= today.yearDay();},
+		'today-past'	:function (date) {return moment(date).yearDay() > today.yearDay();},
 		'any'			:function (date) {return false;},
-		'today-future'	:function (date) {return moment(date).valueOf() < today.valueOf();},
-		'future'		:function (date) {return moment(date).valueOf() <= today.valueOf();}
+		'today-future'	:function (date) {return moment(date).yearDay() < today.yearDay();},
+		'future'		:function (date) {return moment(date).yearDay() <= today.yearDay();}
 	},
 
 	getSelectedAsDates : function () {
@@ -272,13 +318,13 @@ Kalendae.prototype = {
 	},
 
 	isSelected : function (input) {
-		input = moment(input).hours(0).minutes(0).seconds(0).milliseconds(0).valueOf();
+		input = moment(input).yearDay();
 		if (input < 1 || !this._sel || this._sel.length < 1) return false;
 
 		switch (this.settings.mode) {
 			case 'range':
-				var a = this._sel[0] ? this._sel[0].valueOf() : 0,
-					b = this._sel[1] ? this._sel[1].valueOf() : 0;
+				var a = this._sel[0] ? this._sel[0].yearDay() : 0,
+					b = this._sel[1] ? this._sel[1].yearDay() : 0;
 
 				if (a === input || b === input) return 1;
 				if (!a || !b) return 0;
@@ -289,7 +335,7 @@ Kalendae.prototype = {
 			case 'multiple':
 				var i = this._sel.length;
 				while (i--) {
-					if (this._sel[i].valueOf() === input) {
+					if (this._sel[i].yearDay() === input) {
 						return true;
 					}
 				}
@@ -299,7 +345,7 @@ Kalendae.prototype = {
 			case 'single':
 				/* falls through */
 			default:
-				return (this._sel[0] && (this._sel[0].valueOf() === input));
+				return (this._sel[0] && (this._sel[0].yearDay() === input));
 		}
 
 		return false;
@@ -307,13 +353,13 @@ Kalendae.prototype = {
 
 	setSelected : function (input, draw) {
 		this._sel = parseDates(input, this.settings.parseSplitDelimiter, this.settings.format);
-		this._sel.sort(function (a,b) {return a.valueOf() - b.valueOf();});
+		this._sel.sort(function (a,b) {return a.yearDay() - b.yearDay();});
 
 		if (draw !== false) this.draw();
 	},
 
 	addSelected : function (date, draw) {
-		date = moment(date).hours(0).minutes(0).seconds(0).milliseconds(0);
+		date = moment(date).hours(12);
 		switch (this.settings.mode) {
 			case 'multiple':
 				if (!this.isSelected(date)) this._sel.push(date);
@@ -323,7 +369,7 @@ Kalendae.prototype = {
 
 				if (this._sel.length !== 1) this._sel = [date];
 				else {
-					if (date.valueOf() > this._sel[0].valueOf()) this._sel[1] = date;
+					if (date.yearDay() > this._sel[0].yearDay()) this._sel[1] = date;
 					else this._sel = [date, this._sel[0]];
 				}
 				break;
@@ -333,17 +379,17 @@ Kalendae.prototype = {
 				this._sel = [date];
 				break;
 		}
-		this._sel.sort(function (a,b) {return a.valueOf() - b.valueOf();});
+		this._sel.sort(function (a,b) {return a.yearDay() - b.yearDay();});
 		this.publish('change', this);
 		if (draw !== false) this.draw();
 		return true;
 	},
 
 	removeSelected : function (date, draw) {
-		date = moment(date).hours(0).minutes(0).seconds(0).milliseconds(0).valueOf();
+		date = moment(date).yearDay();
 		var i = this._sel.length;
 		while (i--) {
-			if (this._sel[i].valueOf() === date) {
+			if (this._sel[i].yearDay() === date) {
 				this._sel.splice(i,1);
 				this.publish('change', this);
 				if (draw !== false) this.draw();
@@ -355,7 +401,7 @@ Kalendae.prototype = {
 
 	draw : function draw() {
 		// return;
-		var month = moment(this.viewStartDate),
+		var month = moment(this.viewStartDate).hours(12), //force middle of the day to avoid any weird date shifts
 			day,
 			classes = this.classes,
 			cal,
@@ -368,16 +414,6 @@ Kalendae.prototype = {
 			opts = this.settings;
 
 		c = this.calendars.length;
-
-		var viewDelta = ({
-			'past'			: c-1,
-			'today-past'	: c-1,
-			'any'			: c>2?Math.floor(c/2):0,
-			'today-future'	: 0,
-			'future'		: 0
-		})[this.settings.direction];
-
-		if (viewDelta) month = month.subtract({M:viewDelta});
 
 		do {
 			day = moment(month).date(1);
@@ -399,7 +435,7 @@ Kalendae.prototype = {
 				if (day.month() != month.month()) klass.push(classes.dayOutOfMonth);
 				else if (!(this.blackout(day) || this.direction(day)) || s>0) klass.push(classes.dayActive);
 
-				if (Math.floor(today.diff(day, 'days', true)) === 0) klass.push(classes.dayToday);
+				if (day.yearDay() === today.yearDay()) klass.push(classes.dayToday);
 
 				dateString = day.format(this.settings.dayAttributeFormat);
 				if (opts.dateClassMap[dateString]) klass.push(opts.dateClassMap[dateString]);
@@ -414,6 +450,52 @@ Kalendae.prototype = {
 			month.add('months',1);
 		} while (++i < c);
 
+		if (opts.directionScrolling) {
+			var diff = -(moment().diff(month, 'months'));
+			if (opts.direction==='today-past' || opts.direction==='past') {
+
+				if (diff <= 0) {
+					this.disableNextMonth = false;
+					util.removeClassName(this.container, classes.disableNextMonth);
+				} else {
+					this.disableNextMonth = true;
+					util.addClassName(this.container, classes.disableNextMonth);
+				}
+
+			} else if (opts.direction==='today-future' || opts.direction==='future') {
+
+				if (diff > opts.months) {
+					this.disablePreviousMonth = false;
+					util.removeClassName(this.container, classes.disablePreviousMonth);
+				} else {
+					this.disablePreviousMonth = true;
+					util.addClassName(this.container, classes.disablePreviousMonth);
+				}
+
+			}
+
+
+			if (opts.direction==='today-past' || opts.direction==='past') {
+				if (month.add({Y:1}).diff(moment(), 'years') < 0) {
+					this.disableNextYear = false;
+					util.removeClassName(this.container, classes.disableNextYear);
+				} else {
+					this.disableNextYear = true;
+					util.addClassName(this.container, classes.disableNextYear);
+				}
+
+			} else if (opts.direction==='today-future' || opts.direction==='future') {
+				if (month.subtract({Y:1}).diff(moment(), 'years') > 0) {
+					this.disablePreviousYear = false;
+					util.removeClassName(this.container, classes.disablePreviousYear);
+				} else {
+					this.disablePreviousYear = true;
+					util.addClassName(this.container, classes.disablePreviousYear);
+				}
+
+			}
+
+		}
 	}
 }
 
@@ -426,10 +508,10 @@ var parseDates = function (input, delimiter, format) {
 		input = [input];
 	}
 
-	c = input.length;
+	var c = input.length;
 	i = 0;
 	do {
-		if (input[i]) output.push( moment(input[i], format).hours(0).minutes(0).seconds(0).milliseconds(0) );
+		if (input[i]) output.push( moment(input[i], format).hours(12) );
 	} while (++i < c);
 
 	return output;
@@ -440,6 +522,11 @@ var parseDates = function (input, delimiter, format) {
 window.Kalendae = Kalendae;
 
 var util = Kalendae.util = {
+
+	isIE8: function() {
+	    return !!( (/msie 8./i).test(navigator.appVersion) && !(/opera/i).test(navigator.userAgent) && window.ActiveXObject && XDomainRequest && !window.msPerformance );
+	},
+
 // ELEMENT FUNCTIONS
 
 	$: function (elem) {
@@ -462,6 +549,16 @@ var util = Kalendae.util = {
 	isVisible: function (elem) {
 		// shamelessly copied from jQuery
 		return elem.offsetWidth > 0 || elem.offsetHeight > 0;
+	},
+
+	getStyle: function (elem, styleProp) {
+		var y;
+		if (elem.currentStyle) {
+			y = elem.currentStyle[styleProp];
+		} else if (window.getComputedStyle) {
+			y = window.getComputedStyle(elem, null)[styleProp];
+		}
+		return y;
 	},
 
 	domReady:function (f){/in/.test(document.readyState) ? setTimeout(function() {util.domReady(f);},9) : f()},
@@ -514,6 +611,13 @@ var util = Kalendae.util = {
 	removeClassName: function(elem, className) { //copied and modified from Prototype.js
 		if (!(elem = util.$(elem))) return;
 		elem.className = util.trimString(elem.className.replace(new RegExp("(^|\\s+)" + className + "(\\s+|$)"), ' '));
+	},
+
+	isFixed: function (elem) {
+		do {
+			if (util.getStyle(elem, 'position') === 'fixed') return true;
+		} while ((elem = elem.offsetParent));
+		return false;
 	},
 
 	getPosition: function (elem, isInner) {
@@ -629,6 +733,14 @@ Kalendae.Input = function (targetElement, options) {
 	//call our parent constructor
 	Kalendae.call(self, opts);
 
+	//create the close button
+	if (opts.closeButton) {
+		var $closeButton = util.make('a', {'class':classes.closeButton}, self.container)
+		util.addEvent($closeButton, 'click', function () {
+			$input.blur();
+		});
+	}
+
 	if (overwriteInput) $input.value = self.getSelected();
 
 	var $container = self.container,
@@ -670,12 +782,13 @@ Kalendae.Input.prototype = util.merge(Kalendae.prototype, {
 	defaults : util.merge(Kalendae.prototype.defaults, {
 		format: 'MM/DD/YYYY',
 		side: 'bottom',
+		closeButton: true,
 		offsetLeft: 0,
 		offsetTop: 0
 	}),
 	classes : util.merge(Kalendae.prototype.classes, {
-		positioned : 'k-floating'
-
+		positioned : 'k-floating',
+		closeButton: 'k-btn-close'
 	}),
 
 	show : function () {
@@ -705,6 +818,8 @@ Kalendae.Input.prototype = util.merge(Kalendae.prototype, {
 				style.top  = (pos.top + util.getHeight($input) + this.settings.offsetTop) + 'px';
 				break;
 		}
+
+		style.position = util.isFixed($input) ? 'fixed' : 'absolute';
 
 	},
 
@@ -801,13 +916,12 @@ var MinPubSub = function(d){
 		}
 	};
 
-};// Moment.js
+};// moment.js
 // Altered slightly for use in Kalendae.js
-//
-// (c) 2011 Tim Wood
-// Moment.js is freely distributable under the terms of the MIT license.
-//
-// Version 1.3.0
+// version : 1.5.0
+// author : Tim Wood
+// license : MIT
+// momentjs.com
 
 var moment = Kalendae.moment = (function (Date, undefined) {
 
@@ -817,18 +931,27 @@ var moment = Kalendae.moment = (function (Date, undefined) {
         hasModule = (typeof module !== 'undefined'),
         paramsToParse = 'months|monthsShort|monthsParse|weekdays|weekdaysShort|longDateFormat|calendar|relativeTime|ordinal|meridiem'.split('|'),
         i,
+        jsonRegex = /^\/?Date\((\-?\d+)/i,
         charactersToReplace = /(\[[^\[]*\])|(\\)?(Mo|MM?M?M?|Do|DDDo|DD?D?D?|dddd?|do?|w[o|w]?|YYYY|YY|a|A|hh?|HH?|mm?|ss?|zz?|ZZ?|LT|LL?L?L?)/g,
         nonuppercaseLetters = /[^A-Z]/g,
         timezoneRegex = /\([A-Za-z ]+\)|:[0-9]{2} [A-Z]{3} /g,
         tokenCharacters = /(\\)?(MM?M?M?|dd?d?d|DD?D?D?|YYYY|YY|a|A|hh?|HH?|mm?|ss?|ZZ?|T)/g,
         inputCharacters = /(\\)?([0-9]+|([a-zA-Z\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+|([\+\-]\d\d:?\d\d))/gi,
+        isoRegex = /\d{4}.\d\d.\d\d(T(\d\d(.\d\d(.\d\d)?)?)?([\+\-]\d\d:?\d\d)?)?/,
+        isoFormat = 'YYYY-MM-DDTHH:mm:ssZ',
+        isoTimes = [
+            ['HH:mm:ss', /T\d\d:\d\d:\d\d/],
+            ['HH:mm', /T\d\d:\d\d/],
+            ['HH', /T\d\d/]
+        ],
         timezoneParseRegex = /([\+\-]|\d\d)/gi,
-        VERSION = "1.3.0",
+        VERSION = "1.5.0",
         shortcuts = 'Month|Date|Hours|Minutes|Seconds|Milliseconds'.split('|');
 
     // Moment prototype object
-    function Moment(date) {
+    function Moment(date, isUTC) {
         this._d = date;
+        this._isUTC = !!isUTC;
     }
 
     // left zero fill a number
@@ -847,7 +970,7 @@ var moment = Kalendae.moment = (function (Date, undefined) {
             input = isString ? {} : _input,
             ms, d, M, currentDate;
         if (isString && val) {
-            input[_input] = val;
+            input[_input] = +val;
         }
         ms = (input.ms || input.milliseconds || 0) +
             (input.s || input.seconds || 0) * 1e3 + // 1000
@@ -886,16 +1009,15 @@ var moment = Kalendae.moment = (function (Date, undefined) {
     }
 
     // format date using native date object
-    function formatDate(date, inputString) {
-        var m = new Moment(date),
-            currentMonth = m.month(),
+    function formatMoment(m, inputString) {
+        var currentMonth = m.month(),
             currentDate = m.date(),
             currentYear = m.year(),
             currentDay = m.day(),
             currentHours = m.hours(),
             currentMinutes = m.minutes(),
             currentSeconds = m.seconds(),
-            currentZone = m.zone(),
+            currentZone = -m.zone(),
             ordinal = moment.ordinal,
             meridiem = moment.meridiem;
         // check if the character is a format
@@ -989,18 +1111,18 @@ var moment = Kalendae.moment = (function (Date, undefined) {
             case 'zz' :
                 // depreciating 'zz' fall through to 'z'
             case 'z' :
-                return (date.toString().match(timezoneRegex) || [''])[0].replace(nonuppercaseLetters, '');
+                return (m._d.toString().match(timezoneRegex) || [''])[0].replace(nonuppercaseLetters, '');
             case 'Z' :
-                return (currentZone > 0 ? '+' : '-') + leftZeroFill(~~(Math.abs(currentZone) / 60), 2) + ':' + leftZeroFill(~~(Math.abs(currentZone) % 60), 2);
+                return (currentZone < 0 ? '-' : '+') + leftZeroFill(~~(Math.abs(currentZone) / 60), 2) + ':' + leftZeroFill(~~(Math.abs(currentZone) % 60), 2);
             case 'ZZ' :
-                return (currentZone > 0 ? '+' : '-') + leftZeroFill(~~(10 * Math.abs(currentZone) / 6), 4);
+                return (currentZone < 0 ? '-' : '+') + leftZeroFill(~~(10 * Math.abs(currentZone) / 6), 4);
             // LONG DATES
             case 'L' :
             case 'LL' :
             case 'LLL' :
             case 'LLLL' :
             case 'LT' :
-                return formatDate(date, moment.longDateFormat[input]);
+                return formatMoment(m, moment.longDateFormat[input]);
             // DEFAULT
             default :
                 return input.replace(/(^\[)|(\\)|\]$/g, "");
@@ -1017,6 +1139,7 @@ var moment = Kalendae.moment = (function (Date, undefined) {
             isUsingUTC = false,
             inputParts = string.match(inputCharacters),
             formatParts = format.match(tokenCharacters),
+            len = Math.min(inputParts.length, formatParts.length),
             i,
             isPm;
 
@@ -1091,22 +1214,22 @@ var moment = Kalendae.moment = (function (Date, undefined) {
                 // fall through to ZZ
             case 'ZZ' :
                 isUsingUTC = true;
-                a = input.match(timezoneParseRegex);
-                if (a[1]) {
+                a = (input || '').match(timezoneParseRegex);
+                if (a && a[1]) {
                     timezoneHours = ~~a[1];
                 }
-                if (a[2]) {
+                if (a && a[2]) {
                     timezoneMinutes = ~~a[2];
                 }
                 // reverse offsets
-                if (a[0] === '-') {
+                if (a && a[0] === '+') {
                     timezoneHours = -timezoneHours;
                     timezoneMinutes = -timezoneMinutes;
                 }
                 break;
             }
         }
-        for (i = 0; i < formatParts.length; i++) {
+        for (i = 0; i < len; i++) {
             addTime(formatParts[i], inputParts[i]);
         }
         // handle am pm
@@ -1149,7 +1272,7 @@ var moment = Kalendae.moment = (function (Date, undefined) {
             curScore;
         for (i = 0; i < formats.length; i++) {
             curDate = makeDateFromStringAndFormat(string, formats[i]);
-            curScore = compareArrays(inputParts, formatDate(curDate, formats[i]).match(inputCharacters));
+            curScore = compareArrays(inputParts, formatMoment(new Moment(curDate), formats[i]).match(inputCharacters));
             if (curScore < scoreToBeat) {
                 scoreToBeat = curScore;
                 output = curDate;
@@ -1158,12 +1281,57 @@ var moment = Kalendae.moment = (function (Date, undefined) {
         return output;
     }
 
+    // date from iso format
+    function makeDateFromString(string) {
+        var format = 'YYYY-MM-DDT',
+            i;
+        if (isoRegex.exec(string)) {
+            for (i = 0; i < 3; i++) {
+                if (isoTimes[i][1].exec(string)) {
+                    format += isoTimes[i][0];
+                    break;
+                }
+            }
+            return makeDateFromStringAndFormat(string, format + 'Z');
+        }
+        return new Date(string);
+    }
+
+    // helper function for _date.from() and _date.fromNow()
+    function substituteTimeAgo(string, number, withoutSuffix) {
+        var rt = moment.relativeTime[string];
+        return (typeof rt === 'function') ?
+            rt(number || 1, !!withoutSuffix, string) :
+            rt.replace(/%d/i, number || 1);
+    }
+
+    function relativeTime(milliseconds, withoutSuffix) {
+        var seconds = round(Math.abs(milliseconds) / 1000),
+            minutes = round(seconds / 60),
+            hours = round(minutes / 60),
+            days = round(hours / 24),
+            years = round(days / 365),
+            args = seconds < 45 && ['s', seconds] ||
+                minutes === 1 && ['m'] ||
+                minutes < 45 && ['mm', minutes] ||
+                hours === 1 && ['h'] ||
+                hours < 22 && ['hh', hours] ||
+                days === 1 && ['d'] ||
+                days <= 25 && ['dd', days] ||
+                days <= 45 && ['M'] ||
+                days < 345 && ['MM', round(days / 30)] ||
+                years === 1 && ['y'] || ['yy', years];
+        args[2] = withoutSuffix;
+        return substituteTimeAgo.apply({}, args);
+    }
+
     moment = function (input, format) {
-        if (input === null) {
+        if (input === null || input === '') {
             return null;
         }
-        var date;
-        // parse UnderscoreDate object
+        var date,
+            matched;
+        // parse Moment object
         if (input && input._d instanceof Date) {
             date = new Date(+input._d);
         // parse string and format
@@ -1173,18 +1341,67 @@ var moment = Kalendae.moment = (function (Date, undefined) {
             } else {
                 date = makeDateFromStringAndFormat(input, format);
             }
-        // parse everything else
+        // evaluate it as a JSON-encoded date
         } else {
+            matched = jsonRegex.exec(input);
             date = input === undefined ? new Date() :
+                matched ? new Date(+matched[1]) :
                 input instanceof Date ? input :
                 isArray(input) ? dateFromArray(input) :
+                typeof input === 'string' ? makeDateFromString(input) :
                 new Date(input);
         }
         return new Moment(date);
     };
 
+    // creating with utc
+    moment.utc = function (input, format) {
+        if (isArray(input)) {
+            return new Moment(new Date(Date.UTC.apply({}, input)), true);
+        }
+        return (format && input) ? moment(input + ' 0', format + ' Z').utc() : moment(input).utc();
+    };
+
+    // humanizeDuration
+    moment.humanizeDuration = function (num, type, withSuffix) {
+        var difference = +num,
+            rel = moment.relativeTime,
+            output;
+        switch (type) {
+        case "seconds" :
+            difference *= 1000; // 1000
+            break;
+        case "minutes" :
+            difference *= 60000; // 60 * 1000
+            break;
+        case "hours" :
+            difference *= 3600000; // 60 * 60 * 1000
+            break;
+        case "days" :
+            difference *= 86400000; // 24 * 60 * 60 * 1000
+            break;
+        case "weeks" :
+            difference *= 604800000; // 7 * 24 * 60 * 60 * 1000
+            break;
+        case "months" :
+            difference *= 2592000000; // 30 * 24 * 60 * 60 * 1000
+            break;
+        case "years" :
+            difference *= 31536000000; // 365 * 24 * 60 * 60 * 1000
+            break;
+        default :
+            withSuffix = !!type;
+            break;
+        }
+        output = relativeTime(difference, !withSuffix);
+        return withSuffix ? (difference <= 0 ? rel.past : rel.future).replace(/%s/i, output) : output;
+    };
+
     // version number
     moment.version = VERSION;
+
+    // default format
+    moment.defaultFormat = isoFormat;
 
     // language switching and caching
     moment.lang = function (key, values) {
@@ -1263,33 +1480,10 @@ var moment = Kalendae.moment = (function (Date, undefined) {
         }
     });
 
-    // helper function for _date.from() and _date.fromNow()
-    function substituteTimeAgo(string, number, withoutSuffix) {
-        var rt = moment.relativeTime[string];
-        return (typeof rt === 'function') ?
-            rt(number || 1, !!withoutSuffix, string) :
-            rt.replace(/%d/i, number || 1);
-    }
-
-    function relativeTime(milliseconds, withoutSuffix) {
-        var seconds = round(Math.abs(milliseconds) / 1000),
-            minutes = round(seconds / 60),
-            hours = round(minutes / 60),
-            days = round(hours / 24),
-            years = round(days / 365),
-            args = seconds < 45 && ['s', seconds] ||
-                minutes === 1 && ['m'] ||
-                minutes < 45 && ['mm', minutes] ||
-                hours === 1 && ['h'] ||
-                hours < 22 && ['hh', hours] ||
-                days === 1 && ['d'] ||
-                days <= 25 && ['dd', days] ||
-                days <= 45 && ['M'] ||
-                days < 345 && ['MM', round(days / 30)] ||
-                years === 1 && ['y'] || ['yy', years];
-        args[2] = withoutSuffix;
-        return substituteTimeAgo.apply({}, args);
-    }
+    // compare moment object
+    moment.isMoment = function (obj) {
+        return obj instanceof Moment;
+    };
 
     // shortcut for prototype
     moment.fn = Moment.prototype = {
@@ -1302,7 +1496,7 @@ var moment = Kalendae.moment = (function (Date, undefined) {
             return +this._d;
         },
 
-        nativeDate : function () {
+        'native' : function () {
             return this._d;
         },
 
@@ -1314,8 +1508,18 @@ var moment = Kalendae.moment = (function (Date, undefined) {
             return this._d;
         },
 
+        utc : function () {
+            this._isUTC = true;
+            return this;
+        },
+
+        local : function () {
+            this._isUTC = false;
+            return this;
+        },
+
         format : function (inputString) {
-            return formatDate(this._d, inputString);
+            return formatMoment(this, inputString ? inputString : moment.defaultFormat);
         },
 
         add : function (input, val) {
@@ -1330,13 +1534,14 @@ var moment = Kalendae.moment = (function (Date, undefined) {
 
         diff : function (input, val, asFloat) {
             var inputMoment = moment(input),
-                diff = this._d - inputMoment._d,
+                zoneDiff = (this.zone() - inputMoment.zone()) * 6e4,
+                diff = this._d - inputMoment._d - zoneDiff,
                 year = this.year() - inputMoment.year(),
                 month = this.month() - inputMoment.month(),
-                day = this.day() - inputMoment.day(),
+                date = this.date() - inputMoment.date(),
                 output;
             if (val === 'months') {
-                output = year * 12 + month + day / 30;
+                output = year * 12 + month + date / 30;
             } else if (val === 'years') {
                 output = year + month / 12;
             } else {
@@ -1345,16 +1550,13 @@ var moment = Kalendae.moment = (function (Date, undefined) {
                     val === 'hours' ? diff / 36e5 : // 1000 * 60 * 60
                     val === 'days' ? diff / 864e5 : // 1000 * 60 * 60 * 24
                     val === 'weeks' ? diff / 6048e5 : // 1000 * 60 * 60 * 24 * 7
-                    val === 'days' ? diff / 3600 : diff;
+                    diff;
             }
             return asFloat ? output : round(output);
         },
 
         from : function (time, withoutSuffix) {
-            var difference = this.diff(time),
-                rel = moment.relativeTime,
-                output = relativeTime(difference, withoutSuffix);
-            return withoutSuffix ? output : (difference <= 0 ? rel.past : rel.future).replace(/%s/i, output);
+            return moment.humanizeDuration(this.diff(time), !withoutSuffix);
         },
 
         fromNow : function (withoutSuffix) {
@@ -1362,9 +1564,7 @@ var moment = Kalendae.moment = (function (Date, undefined) {
         },
 
         calendar : function () {
-            var today = moment(),
-                todayAtZeroHour = moment([today.year(), today.month(), today.date()]),
-                diff = this.diff(todayAtZeroHour, 'days', true),
+            var diff = this.diff(moment().sod(), 'days', true),
                 calendar = moment.calendar,
                 allElse = calendar.sameElse,
                 format = diff < -6 ? allElse :
@@ -1382,24 +1582,50 @@ var moment = Kalendae.moment = (function (Date, undefined) {
         },
 
         isDST : function () {
-            return this.zone() !== moment([this.year()]).zone();
+            return (this.zone() < moment([this.year()]).zone() ||
+                this.zone() < moment([this.year(), 5]).zone());
         },
 
         day : function (input) {
             var day = this._d.getDay();
-            return input == null ? day :
+            return (typeof input === 'undefined') ? day :
                 this.add({ d : input - day });
+        },
+
+        sod: function () {
+            return this.clone()
+                .hours(0)
+                .minutes(0)
+                .seconds(0)
+                .milliseconds(0);
+        },
+
+        eod: function () {
+            // end of day = start of day plus 1 day, minus 1 millisecond
+            return this.sod().add({
+                d : 1,
+                ms : -1
+            });
+        },
+
+        zone : function () {
+            return this._isUTC ? 0 : this._d.getTimezoneOffset();
+        },
+
+        daysInMonth : function () {
+            return this.clone().month(this.month() + 1).date(0).date();
         }
     };
 
     // helper for adding shortcuts
     function makeShortcut(name, key) {
         moment.fn[name] = function (input) {
-            if (input != null) {
-                this._d['set' + key](input);
+            var utc = this._isUTC ? 'UTC' : '';
+            if (typeof input !== 'undefined') {
+                this._d['set' + utc + key](input);
                 return this;
             } else {
-                return this._d['get' + key]();
+                return this._d['get' + utc + key]();
             }
         };
     }
@@ -1412,15 +1638,24 @@ var moment = Kalendae.moment = (function (Date, undefined) {
     // add shortcut for year (uses different syntax than the getter/setter 'year' == 'FullYear')
     makeShortcut('year', 'FullYear');
 
-    // add shortcut for timezone offset (no setter)
-    moment.fn.zone = function () {
-        return this._d.getTimezoneOffset();
-    };
-
 	return moment;
 })(Date);
 
-today = moment().hours(0).minutes(0).seconds(0).milliseconds(0);
+//function to reset the date object to 00:00 GMT
+moment.fn.stripTime = function () {
+	this._d = new Date(Math.floor(this._d.valueOf() / 86400000) * 86400000);
+	return this;
+}
+
+
+//function to get the total number of days since the epoch.
+moment.fn.yearDay = function (input) {
+	var yearday = Math.floor(this._d / 86400000);
+    return (typeof input === 'undefined') ? yearday :
+        this.add({ d : input - yearday });
+}
+
+today = moment().stripTime();
 
 if (typeof jQuery !== 'undefined') {
 	jQuery.fn.kalendae = function (options) {
