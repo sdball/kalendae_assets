@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Kalendae assets by sdball</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Kalendae assets</h1>
+        <p>Kalendae for the Rails asset pipeline</p>
+        <p class="view"><a href="https://github.com/sdball/kalendae_assets">View the Project on GitHub <small>sdball/kalendae_assets</small></a></p>
+        <ul>
+          <li><a href="https://github.com/sdball/kalendae_assets/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/sdball/kalendae_assets/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/sdball/kalendae_assets">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>Kalendae Assets <a href="http://travis-ci.org/sdball/kalendae_assets"><img src="https://secure.travis-ci.org/sdball/kalendae_assets.png?branch=master" alt="Build Status"></a>
+</h1>
+
+<h2>Installation</h2>
+
+<p><strong>Step 1</strong></p>
+
+<p>Load <code>kalendae_assets</code> in your <code>Gemfile</code> as part of the <code>assets</code> group</p>
+
+<pre><code>group :assets do
+  gem 'kalendae_assets'
+end
+</code></pre>
+
+<p><strong>Step 2</strong></p>
+
+<p>Run 'bundle install'</p>
+
+<p><strong>Step 3</strong></p>
+
+<p>Require <code>kalendae.js</code> in your Javascript manifest (e.g. <code>application.js</code>)</p>
+
+<pre><code>//= require kalendae
+</code></pre>
+
+<p><strong>Step 4</strong></p>
+
+<p>Require <code>kalendae.css</code> in your CSS manifest (e.g. <code>application.css</code>)</p>
+
+<pre><code> *= require kalendae
+</code></pre>
+
+<h2>Usage</h2>
+
+<p>See <a href="https://github.com/ChiperSoft/Kalendae">Kalendae's Documentation</a> for full
+usage instructions.</p>
+
+<p>If you just want to get a quick date picker going: add <code>auto-kal</code> as a class to
+any element that you want to attach a date picker to.</p>
+
+<pre><code>&lt;div class="auto-kal"&gt;&lt;/div&gt;
+
+&lt;%= f.text_field :date, :class =&gt; 'auto-kal' %&gt;
+</code></pre>
+
+<h2>Contributing</h2>
+
+<ol>
+<li>Fork it</li>
+<li>Create your feature branch (<code>git checkout -b my-new-feature</code>)</li>
+<li>Commit your changes (<code>git commit -am 'Added some feature'</code>)</li>
+<li>Push to the branch (<code>git push origin my-new-feature</code>)</li>
+<li>Create new Pull Request</li>
+</ol>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/sdball">sdball</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
