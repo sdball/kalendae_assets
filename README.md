@@ -19,6 +19,12 @@ Run 'bundle install'
 
 Require `kalendae.js` in your Javascript manifest (e.g. `application.js`)
 
+    //= require kalendae.standalone
+
+The standalone version bundles a copy of of moment.js. If you already have
+moment.js in your app, you can use the non-standalone version to keep your
+assets smaller:
+
     //= require kalendae
 
 **Step 4**
