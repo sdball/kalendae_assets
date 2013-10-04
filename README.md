@@ -5,7 +5,11 @@
 
 **Step 1**
 
-Load `kalendae_assets` in your `Gemfile` as part of the `assets` group
+Load `kalendae_assets` in your `Gemfile`. In Rails 4, don't put it in a group:
+
+    gem 'kalendae_assets'
+
+In Rails 3, place it in the `assets` group:
 
     group :assets do
       gem 'kalendae_assets'
