@@ -4,6 +4,7 @@ require File.expand_path('../dummy/config/environment.rb',  __FILE__)
 require 'rails/test_help'
 require 'minitest/autorun'
 require "capybara/rails"
+require 'turn'
 
 Rails.backtrace_cleaner.remove_silencers!
 
