@@ -4,7 +4,6 @@ require File.expand_path('../dummy/config/environment.rb',  __FILE__)
 require 'rails/test_help'
 require 'minitest/autorun'
 require "capybara/rails"
-require 'turn'
 
 Rails.backtrace_cleaner.remove_silencers!
 
@@ -13,5 +12,9 @@ class IntegrationTest < MiniTest::Spec
   register_spec_type(/integration$/, self)
 end
 
-Turn.config.format = :pretty
-Turn.config.natural = true
+unless Rails.version.to_f > 4
+  require 'turn'
+
+  Turn.config.format = :pretty
+  Turn.config.natural = true
+end
