@@ -5,7 +5,11 @@
 
 **Step 1**
 
-Load `kalendae_assets` in your `Gemfile` as part of the `assets` group
+Load `kalendae_assets` in your `Gemfile`. In Rails 4, don't put it in a group:
+
+    gem 'kalendae_assets'
+
+In Rails 3, place it in the `assets` group:
 
     group :assets do
       gem 'kalendae_assets'
@@ -18,6 +22,12 @@ Run 'bundle install'
 **Step 3**
 
 Require `kalendae.js` in your Javascript manifest (e.g. `application.js`)
+
+    //= require kalendae.standalone
+
+The standalone version bundles a copy of of moment.js. If you already have
+moment.js in your app, you can use the non-standalone version to keep your
+assets smaller:
 
     //= require kalendae
 

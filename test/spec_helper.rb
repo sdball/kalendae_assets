@@ -12,5 +12,9 @@ class IntegrationTest < MiniTest::Spec
   register_spec_type(/integration$/, self)
 end
 
-Turn.config.format = :pretty
-Turn.config.natural = true
+unless Rails.version.to_f > 4
+  require 'turn'
+
+  Turn.config.format = :pretty
+  Turn.config.natural = true
+end
